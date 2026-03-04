@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>bro really got a whole website 💔🥀</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .main {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .main img,
+    .main video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* corners: no fixed box, no crop — just constrain max size */
+    .corner {
+      position: absolute;
+    }
+    .corner img,
+    .corner video {
+      display: block;
+      max-width: 60vmin;
+      max-height: 60vmin;
+      width: auto;
+      height: auto;
+    }
+
+    .bl { bottom: 0; left: 0; }
+    .tr { top: 0; right: 0; }
+  </style>
+</head>
+<body>
+
+  <div class="main" id="main"></div>
+  <div class="corner bl" id="c1"></div>
+  <div class="corner tr" id="c2"></div>
+  <audio id="a" loop></audio>
+
+  <script>
+    const IMG   = ['png','jpg','jpeg','webp','gif','avif','svg','bmp'];
+    const VID   = ['mp4','webm','mov','ogv','avi'];
+    const AUD   = ['mp3','ogg','wav','aac','m4a','opus','flac'];
+
+    function probeMedia(base) {
+      const all = [...IMG, ...VID];
+      return new Promise(resolve => {
+        let i = 0;
+        function next() {
+          if (i >= all.length) return resolve(null);
+          const ext = all[i++];
+          const src = `${base}.${ext}`;
+          if (VID.includes(ext)) {
+            const v = document.createElement('video');
+            v.src = src;
+            v.onloadedmetadata = () => resolve({ src, type: 'video' });
+            v.onerror = next;
+          } else {
+            const img = new Image();
+            img.src = src;
+            img.onload  = () => resolve({ src, type: 'img' });
+            img.onerror = next;
+          }
+        }
+        next();
+      });
+    }
+
+    function probeAudio(base) {
+      return new Promise(resolve => {
+        let i = 0;
+        function next() {
+          if (i >= AUD.length) return resolve(null);
+          const src = `${base}.${AUD[i++]}`;
+          const a = new Audio(src);
+          a.oncanplaythrough = () => resolve(src);
+          a.onerror = next;
+        }
+        next();
+      });
+    }
+
+    function mount(result, container, isMain) {
+      if (!result) return;
+      let el;
+      if (result.type === 'video') {
+        el = document.createElement('video');
+        el.autoplay = true;
+        el.loop     = true;
+        el.muted    = true;
+        el.playsInline = true;
+      } else {
+        el = document.createElement('img');
+        el.alt = '';
+      }
+      el.src = result.src;
+      container.appendChild(el);
+    }
+
+    (async () => {
+      mount(await probeMedia('main'), document.getElementById('main'), true);
+      mount(await probeMedia('1'),    document.getElementById('c1'),   false);
+      mount(await probeMedia('2'),    document.getElementById('c2'),   false);
+
+      const src = await probeAudio('sound');
+      const a   = document.getElementById('a');
+      if (src) {
+        a.src = src;
+        a.play().catch(() => {
+          const resume = () => a.play();
+          document.addEventListener('click',      resume, { once: true });
+          document.addEventListener('touchstart', resume, { once: true });
+        });
+      }
+    })();
+  </script>
+
+</body>
+</html>
+  
